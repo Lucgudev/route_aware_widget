@@ -1,18 +1,13 @@
-# RouteAwareWidget
+# Route Aware Widget
 
-A Flutter package that makes widgets aware of route navigation changes. Get callbacks when your widget's page appears or disappears, perfect for analytics tracking, video player controls, data refreshing, and more.
+A Flutter package that makes widgets aware of route navigation changes. Get callbacks when your widget's page appears or disappears - perfect for analytics, video playback control, and lifecycle management.
 
 ## Features
 
-- 🎯 **Universal Compatibility**: Works with all major Flutter navigation systems
-  - Standard Navigator (MaterialPageRoute, CupertinoPageRoute)
-  - AutoRoute
-  - GoRouter
-  - Navigator 2.0
-- 🪶 **Lightweight**: Minimal overhead, uses Flutter's built-in RouteObserver
-- 🔌 **Easy Integration**: Drop-in widget wrapper with two simple callbacks
-- 🎨 **Flexible**: Supports custom navigation systems via observer pattern
-- 📱 **Production Ready**: Based on Flutter's standard RouteAware mixin
+- **Multiple Router Support**: Works with Navigator, GoRouter, and AutoRoute
+- **Simple API**: Just wrap your widget and provide callbacks
+- **Easy Configuration**: Specify your router type once at the app level
+- **Lifecycle Callbacks**: `onPageAppear` and `onPageDisappear` events
 
 ## Installation
 
@@ -31,84 +26,142 @@ flutter pub get
 
 ## Usage
 
-### Basic Setup (Standard Navigator)
+### Step 1: Configure Router Type
 
-1. Create a `RouteObserver` and add it to your app:
+Wrap your app with `RouteAwareConfig` and specify which router you're using:
+
+### Navigator Example
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:route_aware_widget/route_aware_widget.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final routeObserver = RouteObserver<ModalRoute<dynamic>>();
-
-    return RouteObserverProvider(
-      routeObserver: routeObserver,
+    return RouteAwareConfig(
+      routerType: RouterType.navigator,
       child: MaterialApp(
+        // Important: Add the routeObserver to your MaterialApp
         navigatorObservers: [routeObserver],
-        home: const HomePage(),
+        home: FirstPage(),
       ),
     );
   }
 }
-```
 
-2. Wrap your widgets with `RouteAwareWidget`:
-
-```dart
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
+class FirstPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(title: Text('First Page')),
       body: RouteAwareWidget(
-        onPageAppear: () {
-          print('Page appeared!');
-          // Trigger analytics, resume video, refresh data, etc.
-        },
-        onPageDisappear: () {
-          print('Page disappeared!');
-          // Pause video, save state, etc.
-        },
-        child: YourWidget(),
+        onPageAppear: () => print('First page appeared'),
+        onPageDisappear: () => print('First page disappeared'),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SecondPage()),
+            ),
+            child: Text('Go to Second Page'),
+          ),
+        ),
       ),
     );
   }
 }
 ```
 
-### Usage with AutoRoute
-
-AutoRoute works seamlessly with Flutter's RouteObserver:
+### GoRouter Example
 
 ```dart
-import 'package:auto_route/auto_route.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:route_aware_widget/route_aware_widget.dart';
 
-class MyApp extends StatelessWidget {
-  final _appRouter = AppRouter();
-  final _routeObserver = RouteObserver<ModalRoute<dynamic>>();
+void main() {
+  runApp(MyApp());
+}
 
-  MyApp({super.key});
+class MyApp extends StatelessWidget {
+  final _router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => HomePage(),
+      ),
+      GoRoute(
+        path: '/details',
+        builder: (context, state) => DetailsPage(),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
-    return RouteObserverProvider(
-      routeObserver: _routeObserver,
+    return RouteAwareConfig(
+      routerType: RouterType.goRouter,
       child: MaterialApp.router(
-        routerConfig: _appRouter.config(
-          navigatorObservers: () => [_routeObserver],
+        routerConfig: _router,
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Home')),
+      body: RouteAwareWidget(
+        onPageAppear: () => print('Home page appeared'),
+        onPageDisappear: () => print('Home page disappeared'),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: () => context.go('/details'),
+            child: Text('Go to Details'),
+          ),
         ),
+      ),
+    );
+  }
+}
+```
+
+### AutoRoute Example
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:auto_route/auto_route.dart';
+import 'package:route_aware_widget/route_aware_widget.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+@AutoRouterConfig()
+class AppRouter extends RootStackRouter {
+  @override
+  List<AutoRoute> get routes => [
+    AutoRoute(page: HomeRoute.page, initial: true),
+    AutoRoute(page: DetailsRoute.page),
+  ];
+}
+
+class MyApp extends StatelessWidget {
+  final _appRouter = AppRouter();
+
+  @override
+  Widget build(BuildContext context) {
+    return RouteAwareConfig(
+      routerType: RouterType.autoRoute,
+      child: MaterialApp.router(
+        routerConfig: _appRouter.config(),
       ),
     );
   }
@@ -118,51 +171,26 @@ class MyApp extends StatelessWidget {
 class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return RouteAwareWidget(
-      onPageAppear: () => print('Home appeared'),
-      onPageDisappear: () => print('Home disappeared'),
-      child: YourWidget(),
-    );
-  }
-}
-```
-
-### Usage with GoRouter
-
-GoRouter also supports RouteObserver:
-
-```dart
-import 'package:go_router/go_router.dart';
-import 'package:route_aware_widget/route_aware_widget.dart';
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final routeObserver = RouteObserver<ModalRoute<dynamic>>();
-
-    final router = GoRouter(
-      observers: [routeObserver],
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const HomePage(),
+    return Scaffold(
+      appBar: AppBar(title: Text('Home')),
+      body: RouteAwareWidget(
+        onPageAppear: () => print('Home page appeared'),
+        onPageDisappear: () => print('Home page disappeared'),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: () => context.router.push(DetailsRoute()),
+            child: Text('Go to Details'),
+          ),
         ),
-      ],
-    );
-
-    return RouteObserverProvider(
-      routeObserver: routeObserver,
-      child: MaterialApp.router(
-        routerConfig: router,
       ),
     );
   }
 }
 ```
 
-## Real-World Examples
+## Common Use Cases
 
-### 1. Video Player Auto-Pause
+### Video Player Control
 
 ```dart
 class VideoPlayerPage extends StatefulWidget {
@@ -176,21 +204,15 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   Widget build(BuildContext context) {
     return RouteAwareWidget(
-      onPageAppear: () {
-        // Resume video when returning to this page
-        _controller.play();
-      },
-      onPageDisappear: () {
-        // Pause video when navigating away
-        _controller.pause();
-      },
+      onPageAppear: () => _controller.play(),
+      onPageDisappear: () => _controller.pause(),
       child: VideoPlayer(_controller),
     );
   }
 }
 ```
 
-### 2. Analytics Tracking
+### Analytics Tracking
 
 ```dart
 class ProductPage extends StatelessWidget {
@@ -198,20 +220,18 @@ class ProductPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return RouteAwareWidget(
       onPageAppear: () {
-        // Track page view
-        Analytics.logEvent('page_view', {'page': 'product'});
+        analytics.logScreenView(screenName: 'ProductDetails');
       },
       onPageDisappear: () {
-        // Track page exit
-        Analytics.logEvent('page_exit', {'page': 'product'});
+        analytics.logEvent(name: 'left_product_details');
       },
-      child: ProductList(),
+      child: ProductDetailsWidget(),
     );
   }
 }
 ```
 
-### 3. Data Refresh
+### Resource Management
 
 ```dart
 class DashboardPage extends StatefulWidget {
@@ -220,16 +240,18 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  Future<void> _refreshData() async {
-    // Fetch latest data
-  }
+  StreamSubscription? subscription;
 
   @override
   Widget build(BuildContext context) {
     return RouteAwareWidget(
       onPageAppear: () {
-        // Refresh data when page becomes visible
-        _refreshData();
+        // Start expensive operations
+        subscription = streamController.stream.listen(...);
+      },
+      onPageDisappear: () {
+        // Clean up resources
+        subscription?.cancel();
       },
       child: DashboardContent(),
     );
@@ -241,49 +263,95 @@ class _DashboardPageState extends State<DashboardPage> {
 
 ### RouteAwareWidget
 
-The main widget that provides route awareness.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `child` | `Widget` | Yes | The widget to wrap |
+| `onPageAppear` | `VoidCallback?` | No | Called when the page becomes visible |
+| `onPageDisappear` | `VoidCallback?` | No | Called when the page becomes hidden |
 
-#### Parameters
+### RouteAwareConfig
 
-- `child` (required): The widget to display
-- `onPageAppear`: Callback when the route becomes visible
-  - Called when route is pushed
-  - Called when a covering route is popped
-- `onPageDisappear`: Callback when the route becomes hidden
-  - Called when a new route is pushed on top
-  - Called when this route is popped
-- `routeObserver`: Optional RouteObserver (if not using RouteObserverProvider)
-- `customObserver`: Optional custom observer for non-standard navigation
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `routerType` | `RouterType` | Yes | The type of router being used |
+| `child` | `Widget` | Yes | The app widget tree |
 
-### RouteObserverProvider
+### RouterType Enum
 
-InheritedWidget that provides RouteObserver to the widget tree.
+- `RouterType.navigator` - Standard Flutter Navigator
+- `RouterType.goRouter` - GoRouter package
+- `RouterType.autoRoute` - AutoRoute package
 
-#### Parameters
+## Setup Requirements
 
-- `routeObserver` (required): The RouteObserver instance
-- `child` (required): The child widget
+### For Navigator
+
+You **MUST** add the `routeObserver` to your `MaterialApp`:
+
+```dart
+RouteAwareConfig(
+  routerType: RouterType.navigator,
+  child: MaterialApp(
+    navigatorObservers: [routeObserver],  // Required!
+    home: HomePage(),
+  ),
+)
+```
+
+### For GoRouter
+
+Wrap your app with `RouteAwareConfig`:
+
+```dart
+RouteAwareConfig(
+  routerType: RouterType.goRouter,
+  child: MaterialApp.router(
+    routerConfig: router,
+  ),
+)
+```
+
+### For AutoRoute
+
+Wrap your app with `RouteAwareConfig`:
+
+```dart
+RouteAwareConfig(
+  routerType: RouterType.autoRoute,
+  child: MaterialApp.router(
+    routerConfig: appRouter.config(),
+  ),
+)
+```
 
 ## How It Works
 
-`RouteAwareWidget` uses Flutter's built-in `RouteAware` mixin and `RouteObserver` class. This is the same mechanism Flutter uses internally for route awareness.
+1. **Router Type Configuration**: You specify which router you're using via `RouteAwareConfig`
+2. **Router-Specific Implementation**: The widget uses the appropriate implementation for your router
+3. **Lifecycle Callbacks**: Each implementation uses the router's native mechanisms to detect route changes and trigger callbacks
 
-When wrapped in a `RouteAwareWidget`:
-1. The widget subscribes to route changes via `RouteObserver`
-2. When route visibility changes, RouteAware callbacks are triggered
-3. Your `onPageAppear` and `onPageDisappear` callbacks are invoked
-4. Cleanup happens automatically when the widget is disposed
+## Troubleshooting
 
-## Differences from VisibilityDetector
+### Callbacks not firing with Navigator
 
-| Feature | RouteAwareWidget | VisibilityDetector |
-|---------|------------------|-------------------|
-| Trigger | Route navigation | Widget visibility in viewport |
-| Performance | Lightweight | Can be expensive for many widgets |
-| Use Case | Page-level events | Scroll-based visibility |
-| Accuracy | Route changes only | Pixel-perfect visibility |
+Make sure you've:
+1. Wrapped your app with `RouteAwareConfig(routerType: RouterType.navigator, ...)`
+2. Added `routeObserver` to `navigatorObservers`:
 
-Use `RouteAwareWidget` for page-level events (analytics, video control, etc.) and `VisibilityDetector` for scroll-based visibility (lazy loading, impression tracking).
+```dart
+MaterialApp(
+  navigatorObservers: [routeObserver],
+  // ...
+)
+```
+
+### Callbacks not firing with GoRouter
+
+Make sure you've wrapped your app with `RouteAwareConfig(routerType: RouterType.goRouter, ...)`. The widget uses location-based detection, so ensure your routes have unique paths.
+
+### Callbacks not firing with AutoRoute
+
+Make sure you've wrapped your app with `RouteAwareConfig(routerType: RouterType.autoRoute, ...)`.
 
 ## Contributing
 
@@ -295,6 +363,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-If you find this package helpful, please give it a star on GitHub!
-
-For issues and feature requests, please visit the issue tracker.
+For issues and feature requests, please file an issue on the [GitHub repository](https://github.com/yourusername/route_aware_widget/issues).

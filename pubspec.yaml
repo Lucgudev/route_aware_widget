@@ -19,6 +19,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  auto_route: 10.2.0
+  go_router: ^17.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
