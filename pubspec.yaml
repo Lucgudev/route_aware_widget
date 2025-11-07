@@ -1,6 +1,6 @@
 name: route_aware_widget
 description: A Flutter package that makes widgets aware of route navigation changes. Get callbacks when your widget's page appears or disappears.
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/Lucgudev/route_aware_widget
 repository: https://github.com/Lucgudev/route_aware_widget
 issue_tracker: https://github.com/Lucgudev/route_aware_widget/issues
